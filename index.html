@@ -1,0 +1,302 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Компас и уровень</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #101827;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+h1 {
+    margin-top: 25px;
+}
+
+.container {
+    max-width: 430px;
+    margin: auto;
+    padding: 15px;
+}
+
+button {
+    background: #1687ff;
+    color: white;
+    border: none;
+    padding: 14px 25px;
+    border-radius: 12px;
+    font-size: 16px;
+    margin: 12px;
+    cursor: pointer;
+}
+
+.section {
+    background: #1d293b;
+    padding: 20px;
+    margin-top: 20px;
+    border-radius: 20px;
+}
+
+.compass {
+    width: 250px;
+    height: 250px;
+    border: 5px solid #1687ff;
+    border-radius: 50%;
+    margin: 20px auto;
+    position: relative;
+    background: #26364d;
+}
+
+.direction {
+    position: absolute;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.north { top: 8px; left: 50%; transform: translateX(-50%); color: #ff4545; }
+.south { bottom: 8px; left: 50%; transform: translateX(-50%); }
+.east { right: 10px; top: 50%; transform: translateY(-50%); }
+.west { left: 10px; top: 50%; transform: translateY(-50%); }
+
+.needle {
+    position: absolute;
+    width: 8px;
+    height: 175px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    transition: transform 0.15s;
+}
+
+.needle::before {
+    content: "";
+    display: block;
+    width: 8px;
+    height: 50%;
+    background: #ff4545;
+    border-radius: 10px;
+}
+
+.needle::after {
+    content: "";
+    display: block;
+    width: 8px;
+    height: 50%;
+    background: white;
+    border-radius: 10px;
+}
+
+.center {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: #1687ff;
+    border-radius: 50%;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.degrees {
+    font-size: 28px;
+    color: #40a9ff;
+    font-weight: bold;
+}
+
+.level {
+    width: 260px;
+    height: 260px;
+    border: 4px solid #1687ff;
+    border-radius: 50%;
+    margin: 20px auto;
+    position: relative;
+    background:
+        linear-gradient(90deg, transparent 49.5%, #64748b 50%, transparent 50.5%),
+        linear-gradient(transparent 49.5%, #64748b 50%, transparent 50.5%),
+        #26364d;
+}
+
+.bubble {
+    width: 35px;
+    height: 35px;
+    background: #40e0a0;
+    border: 3px solid white;
+    border-radius: 50%;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    transition: left 0.08s, top 0.08s;
+}
+
+.status {
+    font-size: 18px;
+    color: #40e0a0;
+}
+
+.info {
+    color: #b8c5d8;
+    font-size: 14px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Компас и уровень</h1>
+
+<p class="info">Инструменты для определения направления и наклона</p>
+
+<button onclick="startSensors()">Включить датчики</button>
+
+<div class="section">
+
+<h2>🧭 Компас</h2>
+
+<div class="compass">
+
+<span class="direction north">N</span>
+<span class="direction south">S</span>
+<span class="direction east">E</span>
+<span class="direction west">W</span>
+
+<div class="needle" id="needle"></div>
+<div class="center"></div>
+
+</div>
+
+<div class="degrees" id="degrees">0°</div>
+<p id="direction">Север</p>
+
+</div>
+
+<div class="section">
+
+<h2>Уровень</h2>
+
+<div class="level">
+<div class="bubble" id="bubble"></div>
+</div>
+
+<p class="degrees" id="angle">0°</p>
+<p class="status" id="levelStatus">Ожидание датчиков</p>
+
+</div>
+
+</div>
+
+<script>
+
+function startSensors() {
+
+    if (!window.DeviceOrientationEvent) {
+        alert("Ваш браузер не поддерживает датчики телефона");
+        return;
+    }
+
+    if (typeof DeviceOrientationEvent.requestPermission === "function") {
+
+        DeviceOrientationEvent.requestPermission()
+        .then(function(permission) {
+
+            if (permission === "granted") {
+                activateSensors();
+            } else {
+                alert("Разрешите доступ к датчикам");
+            }
+
+        })
+        .catch(function() {
+            alert("Не удалось получить доступ к датчикам");
+        });
+
+    } else {
+        activateSensors();
+    }
+}
+
+function activateSensors() {
+
+    window.addEventListener("deviceorientation", updateCompass);
+    window.addEventListener("deviceorientationabsolute", updateCompass);
+
+    document.getElementById("levelStatus").innerText =
+        "Датчики включены";
+}
+
+function updateCompass(event) {
+
+    let heading;
+
+    if (event.webkitCompassHeading !== undefined) {
+        heading = event.webkitCompassHeading;
+    } else if (event.alpha !== null) {
+        heading = (360 - event.alpha) % 360;
+    }
+
+    if (heading !== undefined && !isNaN(heading)) {
+
+        document.getElementById("needle").style.transform =
+            "translate(-50%, -50%) rotate(" + heading + "deg)";
+
+        document.getElementById("degrees").innerText =
+            Math.round(heading) + "°";
+
+        let directions = [
+            "Север", "Северо-восток",
+            "Восток", "Юго-восток",
+            "Юг", "Юго-запад",
+            "Запад", "Северо-запад"
+        ];
+
+        let index = Math.round(heading / 45) % 8;
+
+        document.getElementById("direction").innerText =
+            directions[index];
+    }
+
+    if (event.beta !== null && event.gamma !== null) {
+
+        let beta = event.beta;
+        let gamma = event.gamma;
+
+        let x = Math.max(-90, Math.min(90, gamma));
+        let y = Math.max(-90, Math.min(90, beta));
+
+        document.getElementById("bubble").style.left =
+            (50 + x / 2) + "%";
+
+        document.getElementById("bubble").style.top =
+            (50 + y / 2) + "%";
+
+        let angle = Math.sqrt(beta * beta + gamma * gamma);
+
+        document.getElementById("angle").innerText =
+            angle.toFixed(1) + "°";
+
+        if (angle < 2) {
+            document.getElementById("levelStatus").innerText =
+                "Поверхность ровная!";
+        } else {
+            document.getElementById("levelStatus").innerText =
+                "Есть наклон";
+        }
+    }
+}
+
+</script>
+
+</body>
+</html>
